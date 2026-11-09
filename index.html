@@ -95,7 +95,7 @@
 <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
 </head>
 <body>
-<div id="brand"><img src="assets/images/sfbu_logo.png" alt="SFBU"><span>SFBU&nbsp;NAV</span></div>
+<div id="brand"><img src="sfbu_logo.png" alt="SFBU"><span>SFBU&nbsp;NAV</span></div>
 <button id="bclasses" title="Show all classes"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span>CLASSES</span><span class="badge" id="cbadge"></span></button>
 <div id="classes"></div>
 <div id="ui">
@@ -214,6 +214,10 @@ const SCHEDULE = [
   { room: "room201_2f", course: "APP201 - Ramirez",         section: "A", days: ["Mon", "Wed"], start: "16:30", end: "17:45", teacher: "Jesse Ramirez",         status: "Closed" },
   { room: "room201_2f", course: "APP201 - Ramirez",         section: "B", days: ["Tue", "Thu"], start: "16:30", end: "17:45", teacher: "Jesse Ramirez",         status: "Closed" },
   { room: "room201_2f", course: "APP201 - Ramirez",         section: "C", days: ["Mon", "Wed"], start: "15:00", end: "16:15", teacher: "Jesse Ramirez",         status: "Closed" },
+  { room: "room211",    course: "Course 7 - Abdigarmestani", section: "A", days: ["Wed", "Fri"], start: "09:00", end: "10:15", teacher: "Seyedehsamane Abdigarmestani", status: "Waitlisted" },
+  { room: "lab101",     course: "Course 8 - Martha",        section: "A", days: ["Mon", "Wed"], start: "16:30", end: "17:45", teacher: "Venkata Martha",        status: "Open" },
+  { room: "lab101",     course: "Course 9 - Martha",        section: "A", days: ["Mon", "Wed"], start: "18:00", end: "18:50", teacher: "Venkata Martha",        status: "Open" },
+  { room: "lab101",     course: "Course 10 - Martha",       section: "A", days: ["Mon", "Wed"], start: "18:00", end: "18:50", teacher: "Venkata Martha",        status: "Open" },
 ];
 
 // ------------------------------------------------------------------
@@ -229,17 +233,18 @@ const SCHEDULE = [
 // ------------------------------------------------------------------
 const PHOTOS = [
   // floor 1: SAMPLE photos placed on your real layout - replace with real panoramas
-  { id: "hall_1",    file: "assets/photos/hall_1.jpg",    floor: 1, x: 40, z: 17, facing: "top", links: ["hall_2f_1"] },
-  { id: "hall_2",    file: "assets/photos/hall_2.jpg",    floor: 1, x: 45, z: 28, facing: "top" },
-  { id: "hall_3",    file: "assets/photos/hall_3.jpg",    floor: 1, x: 70, z: 22, facing: "top" },
-  { id: "lobby",     file: "assets/photos/lobby.jpg",     floor: 1, x: 66, z: 35, facing: "top" },
-  { id: "office",    file: "assets/photos/office.jpg",    floor: 1, x: 26, z: 19, facing: "top" },
-  { id: "lounge",    file: "assets/photos/lounge.jpg",    floor: 1, x: 48, z: 9,  facing: "top" },
-  { id: "hall_2f_1", file: "assets/photos/hall_2f_1.jpg", floor: 2, x: 20, z: 22, facing: "top", links: ["hall_1"] },
+  { id: "hall_1",    file: "photos/hall_1.jpg",    floor: 1, x: 40, z: 17, facing: "top", links: ["hall_2f_1"] },
+  { id: "hall_2",    file: "photos/hall_2.jpg",    floor: 1, x: 45, z: 28, facing: "top" },
+  { id: "hall_3",    file: "photos/hall_3.jpg",    floor: 1, x: 70, z: 22, facing: "top" },
+  { id: "lobby",     file: "photos/lobby.jpg",     floor: 1, x: 66, z: 35, facing: "top" },
+  { id: "office",    file: "photos/office.jpg",    floor: 1, x: 26, z: 19, facing: "top" },
+  { id: "lounge",    file: "photos/lounge.jpg",    floor: 1, x: 48, z: 9,  facing: "top" },
+  { id: "hall_2f_1", file: "photos/hall_2f_1.jpg", floor: 2, x: 20, z: 22, facing: "top", links: ["hall_1"] },
   // YOUR REAL SFBU PANORAMAS
-  { id: "sfbu_hallway",   file: "assets/photos/sfbu_hallway.jpg",   floor: 2, x: 76, z: 11.5, facing: "top" },
-  { id: "sfbu_classroom", file: "assets/photos/sfbu_classroom.jpg", floor: 2, x: 61, z: 18,   facing: "top" },   // Makerspace = Room 207
+  { id: "sfbu_hallway",   file: "photos/sfbu_hallway.jpg",   floor: 2, x: 76, z: 11.5, facing: "top" },
+  { id: "sfbu_classroom", file: "photos/sfbu_classroom.jpg", floor: 2, x: 61, z: 18,   facing: "top" },   // Makerspace = Room 207
 ];
+const SHOW_PHOTO_ICONS = false;   // camera icons on the map (true = show them)
 const MAX_LINK = 18;   // meters: photos further apart than this don't get an arrow
 
 // What kind of photos are you using?
@@ -402,7 +407,7 @@ for (const ph of PHOTOS) {
   div.onclick = () => openPhoto(ph.id);
   const obj = new CSS2DObject(div);
   obj.position.set(ph.x, 1.2, ph.z);
-  floorGroups[ph.floor].add(obj);
+  if (SHOW_PHOTO_ICONS) floorGroups[ph.floor].add(obj);
   camIcons[ph.id] = obj;
 }
 
@@ -772,7 +777,7 @@ function showAnswer(text, photo) {
   a.textContent = text; a.style.display = 'block';
   if (photo) {   // this room has a 360 photo -> offer to look inside
     const b = document.createElement('button');
-    b.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span>Look inside</span>';
+    b.textContent = 'Look inside';
     b.onclick = () => openPhoto(photo.id);
     a.appendChild(b);
   }
@@ -909,7 +914,7 @@ let walkTimer = null;                       // pending walk start
 // ---------- the mascot ----------
 const mascot = new THREE.Group();
 {
-  const tex = new THREE.TextureLoader().load('assets/images/mascot.png');
+  const tex = new THREE.TextureLoader().load('mascot.png');
   tex.colorSpace = THREE.SRGBColorSpace;
   // sizeAttenuation: false = same size on screen at any zoom (like a map pin)
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false,

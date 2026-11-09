@@ -5,7 +5,7 @@ Setup:
     pip install fastapi uvicorn requests
     ollama pull llama3.1:8b
 Run:
-    uvicorn server:app --host 0.0.0.0 --port 8000
+    uvicorn backend.server:app --host 0.0.0.0 --port 8000
 Then set USE_AI = true in index.html.
 """
 import json
@@ -94,7 +94,7 @@ def _slices(img, n=12):
 def _build_index():
     from PIL import Image
     keys, imgs = [], []
-    folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "photos")
+    folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "photos")
     for f in sorted(glob.glob(os.path.join(folder, "*.jpg"))):
         pid = os.path.splitext(os.path.basename(f))[0]
         img = Image.open(f).convert("RGB")

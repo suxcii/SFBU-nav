@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+requests
+
+# Only for "Where am I?" and voice
+torch
+transformers
+pillow
+numpy

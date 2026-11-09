@@ -41,7 +41,7 @@ We use the 8B model in the app because instant answers matter for navigation. Th
 ```
 Floor sketches  ->  room list (meters)  ->  3D map in the browser (three.js)
 Panoramas       ->  photo spots          ->  Pannellum viewer + auto arrows
-Question        ->  server.py (FastAPI)  ->  Ollama LLM on DGX  ->  room id
+Question        ->  backend/server.py (FastAPI)  ->  Ollama LLM on DGX  ->  room id
 Room id + mascot position  ->  A* on a 0.5 m grid  ->  dotted route + directions
 Photo           ->  DINOv2 on DGX        ->  best matching panorama  ->  you are here
 Voice           ->  Whisper on DGX       ->  text  ->  same search as above
@@ -54,7 +54,7 @@ Voice           ->  Whisper on DGX       ->  text  ->  same search as above
 The map, routes, mascot, panoramas, and class schedule work without the DGX. Search falls back to keyword matching.
 
 ```bash
-cd sfbu-nav
+cd SFBU-nav
 python -m http.server 5500
 ```
 
@@ -69,11 +69,11 @@ ollama pull llama3.1:8b
 
 # 2. Python packages
 python3 -m venv ~/venv && source ~/venv/bin/activate
-pip install fastapi uvicorn requests
-pip install torch transformers pillow numpy   # only for Where am I? and voice
+pip install -r backend/requirements.txt
+# torch, transformers, pillow, numpy are only needed for Where am I? and voice
 
 # 3. AI server (terminal 1)
-uvicorn server:app --host 0.0.0.0 --port 8000
+uvicorn backend.server:app --host 0.0.0.0 --port 8000
 
 # 4. Website (terminal 2)
 python3 -m http.server 5500
@@ -108,13 +108,17 @@ Tip for floor plans: draw on grid paper with 1 square = 1 big step (about 1 m). 
 ## Project structure
 
 ```
-sfbu-nav/
-  index.html      the whole app: map, routes, mascot, panoramas, classes
-  server.py       DGX backend: /ask (LLM), /whereami (DINOv2), /transcribe (Whisper)
-  photos/         panoramas (sample placeholders + real SFBU photos)
-  test_photos/    photos for testing Where am I?
-  mascot.png      SFBU mascot marker
-  sfbu_logo.png   SFBU logo
+SFBU-nav/
+├── index.html              the whole app: map, routes, mascot, panoramas, classes
+├── backend/
+│   ├── server.py           DGX backend: /ask (LLM), /whereami (DINOv2), /transcribe (Whisper)
+│   └── requirements.txt    Python packages for the backend
+├── assets/
+│   ├── images/             mascot.png (map marker), sfbu_logo.png
+│   ├── photos/             panoramas (sample placeholders + real SFBU photos)
+│   └── test_photos/        photos for testing Where am I?
+├── README.md
+└── LICENSE
 ```
 
 ## Status and next steps

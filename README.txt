@@ -1,57 +1,137 @@
-SFBU NAV - INDOOR NAVIGATION - HOW TO RUN
-==============================================
+# Nav.sfbu
 
-What's in this folder
----------------------
-index.html   the app (3D map, 2 floors, search, 360 photos)
-server.py    the AI search (runs on the DGX, use later)
-photos/      sample 360 photos (replace with your real ones)
+A 3D indoor navigation app for San Francisco Bay University, powered by AI running locally on an NVIDIA DGX.
 
-How to open it on your laptop
------------------------------
-The 360 photos only load through a small local web server
-(opening index.html by double-click shows the map, but photos won't load).
+GPS stops working indoors. SFBU Nav gives students, visitors, and anyone who needs accessible routes a way to find rooms, see real photos of each space, and know which classes are on right now, all without sending any data to the cloud.
 
-1. Install Python if you don't have it (python.org).
-2. Open a terminal / command prompt IN THIS FOLDER.
-3. Run:      python -m http.server 5500
-4. Open Chrome and go to:   http://localhost:5500
+## Features
 
-Try it
-------
-- Click 1F / 2F / All to switch floors, 2D / 3D to change the view.
-- Type "print" or "tuition" in the search box.
-- Click an orange camera icon -> you fade into the 360 photo.
-- Click the arrows inside the photo to walk to the next photo.
-- "Back to map" (or Esc) returns to the 3D map.
+- **3D map of both floors.** Built from hand-drawn floor sketches at real scale (about 85 m x 37 m). Switch between 1F, 2F, and both floors stacked, in 2D or 3D.
+- **Ask in plain English.** "I'm hungry", "where can I use a 3D printer?", "where is the Ramirez class?" A language model on the DGX picks the right room.
+- **Walking routes.** Glowing dots show the shortest path around walls and through doors (A* pathfinding). Routes to the other floor go through the stairs, or the elevator if you mention a wheelchair or the elevator.
+- **Turn-by-turn style directions.** "Take the stairs to the 2nd Floor, then follow the dots. Room 207 - Makerspace is on the 2nd Floor. It will be on your right, about 113 m, 1 min walk."
+- **Mascot marker.** The SFBU mascot shows where you are. Drag it, or double-click any floor to move it there. After a search it walks the route, takes the stairs, and announces when it arrives.
+- **Real panoramas.** Camera icons open panoramas taken at SFBU, with arrows to walk between photo spots and a mini map.
+- **Class schedule.** Room labels show NOW or "in 20 min". The Classes panel lists every section (now, starting soon, later today, finished, other days) with teacher and registration status. Click a class to route to its room.
+- **Where am I? (experimental).** Upload a photo and an image model on the DGX matches it against the panoramas to place you on the map.
+- **Voice (experimental).** Speak your question; Whisper on the DGX transcribes it and the answer is read back out loud.
 
-Mascot = where you are
-----------------------
-- Drag the mascot with the mouse to move it on the floor you are viewing.
-- Double-click anywhere on a floor to put the mascot there
-  (switch to 2F first, then double-click, to move it to the 2nd floor).
-- Search for a room: glowing dots show the route, plus left/right and distance.
-- Words like "wheelchair" or "elevator" make the route use the elevator.
-- After a search the mascot walks the route (up the stairs too) and says when it arrives.
-  Dragging the mascot, a new search, or Reset stops the walk.
-- Reset puts the mascot back at the entrance.
+## How the DGX is used
 
-Use your own school
--------------------
-1. Rooms:  edit the BUILDING list near the top of index.html
-           (x, z, w, d = squares on your grid drawing).
-2. Photos: use the phone's normal Panorama mode (PHOTO_MODE = 'panorama').
-           Start facing the TOP of your paper, turn LEFT -> RIGHT a full circle.
-           Didn't turn a full circle? add  sweep: 270  (degrees turned) to that photo.
-           Put the photos in the photos folder, then edit the
-           PHOTOS list: file name, floor, x, z where you stood,
-           and which way the phone faced when you started ("top" of paper).
-3. Arrows between photos are made automatically.
-   If an arrow points the wrong way, add  yawFix: 90  (or -90 / 180) to that photo.
+Everything AI runs locally on the DGX. No cloud APIs, no student data leaves the machine.
 
-Turn on the AI search (on the DGX)
-----------------------------------
-   ollama pull llama3.1:8b
-   pip install fastapi uvicorn requests
-   uvicorn server:app --host 0.0.0.0 --port 8000
-Then in index.html change   const USE_AI = false;   to   true
+| Task | Model | Runs on |
+|---|---|---|
+| Understand questions, pick a room | Llama 3.1 8B (Ollama) | DGX |
+| Where am I? photo matching | DINOv2 (image embeddings) | DGX |
+| Speech to text | Whisper small | DGX |
+| Map, routes, mascot | three.js + A* in the browser | Any device |
+
+Measured on the DGX Spark:
+
+| Model | Speed | Size |
+|---|---|---|
+| Llama 3.1 8B | 41.6 tokens/s | 5 GB |
+| Llama 3.1 70B | 3.63 tokens/s | 42 GB |
+
+We use the 8B model in the app because instant answers matter for navigation. The 70B model also runs on the same DGX, which a normal laptop cannot do.
+
+## How it works
+
+```
+Floor sketches  ->  room list (meters)  ->  3D map in the browser (three.js)
+Panoramas       ->  photo spots          ->  Pannellum viewer + auto arrows
+Question        ->  server.py (FastAPI)  ->  Ollama LLM on DGX  ->  room id
+Room id + mascot position  ->  A* on a 0.5 m grid  ->  dotted route + directions
+Photo           ->  DINOv2 on DGX        ->  best matching panorama  ->  you are here
+Voice           ->  Whisper on DGX       ->  text  ->  same search as above
+```
+
+## Run it
+
+### Map only (any computer)
+
+The map, routes, mascot, panoramas, and class schedule work without the DGX. Search falls back to keyword matching.
+
+```bash
+cd sfbu-nav
+python -m http.server 5500
+```
+
+Open http://localhost:5500. In VS Code you can also right-click `index.html` and choose **Open with Live Server**.
+
+### With the AI (DGX)
+
+```bash
+# 1. AI engine and model
+curl -fsSL https://ollama.com/install.sh | sh
+ollama pull llama3.1:8b
+
+# 2. Python packages
+python3 -m venv ~/venv && source ~/venv/bin/activate
+pip install fastapi uvicorn requests
+pip install torch transformers pillow numpy   # only for Where am I? and voice
+
+# 3. AI server (terminal 1)
+uvicorn server:app --host 0.0.0.0 --port 8000
+
+# 4. Website (terminal 2)
+python3 -m http.server 5500
+```
+
+In `index.html`, `USE_AI` must be `true`. Open http://localhost:5500.
+
+No admin password? Ollama can run from your home folder: download `ollama-linux-arm64.tar.zst` from ollama.com, unpack it with `tar --zstd -xf`, and start `~/ollama/bin/ollama serve`.
+
+## Controls
+
+| Action | How |
+|---|---|
+| Search | Type in the search bar, or use the mic button |
+| Move the mascot | Drag it, or double-click a floor (switch to 2F first to move it upstairs) |
+| Where am I? | Location button, then choose a photo |
+| See classes | Classes button, top right |
+| Look inside a room | Camera icon, or "Look inside" in the answer |
+| Start over | Reset |
+| Test a different time | Add `?time=2026-11-09T17:40` to the address |
+
+## Edit the data
+
+All data lives at the top of `index.html`.
+
+- **`BUILDING`**: rooms per floor. Each room is a rectangle in meters (`x`, `z` = top-left corner, `w`, `d` = size) with a `door` side and search `keywords`.
+- **`SCHEDULE`**: one line per class section: `room`, `course`, `section`, `days`, `start`, `end` (24-hour), `teacher`, `status`.
+- **`PHOTOS`**: one line per panorama: file, floor, where it was taken (`x`, `z`), and which way the phone faced at the start (`facing`).
+
+Tip for floor plans: draw on grid paper with 1 square = 1 big step (about 1 m). The numbers on the grid go straight into `BUILDING`.
+
+## Project structure
+
+```
+sfbu-nav/
+  index.html      the whole app: map, routes, mascot, panoramas, classes
+  server.py       DGX backend: /ask (LLM), /whereami (DINOv2), /transcribe (Whisper)
+  photos/         panoramas (sample placeholders + real SFBU photos)
+  test_photos/    photos for testing Where am I?
+  mascot.png      SFBU mascot marker
+  sfbu_logo.png   SFBU logo
+```
+
+## Status and next steps
+
+Working: 3D map of both floors, AI search on the DGX, routes across floors, mascot walking, panoramas, class schedule panel.
+
+Experimental: Where am I? photo matching and voice. Both are implemented but not yet tested end to end on the DGX.
+
+Next:
+- More panoramas around both floors for better photo matching
+- Real course names in the schedule
+- Spoken step-by-step guidance for blind and low-vision students
+- Evacuation simulation on the DGX GPU
+
+## Notes
+
+- Floor plans are approximate, drawn by hand from walking the building.
+- Class times come from SFBU Course Registration.
+- Some panoramas show people. Ask for permission before publishing them, or blur faces first.
+- SFBU name, logo, and mascot belong to San Francisco Bay University. Used here for a student project.

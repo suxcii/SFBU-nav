@@ -139,3 +139,10 @@ Next:
 - Class times come from SFBU Course Registration.
 - Some panoramas show people. Ask for permission before publishing them, or blur faces first.
 - SFBU name, logo, and mascot belong to San Francisco Bay University. Used here for a student project.
+
+## License
+ 
+The code is released under the [MIT License](LICENSE).
+ 
+The license does not cover the SFBU name, logo, and mascot (`sfbu_logo.png`, `mascot.png`), which belong to San Francisco Bay University, or the photos in `photos/` and `test_photos/`. Ask before reusing them.
+ 
